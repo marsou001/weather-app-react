@@ -8,17 +8,21 @@ function App() {
   const [error, setError] = useState(null);  
 
   const { REACT_APP_WEATHER_BASE, REACT_APP_WEATHER_KEY, REACT_APP_CITIES_BASE, REACT_APP_CITIES_HOST, REACT_APP_CITIES_KEY } = process.env;
+  
+  const date = new Date();
 
-  const getDate = () => {
-    const date = new Date();
+  const month = date.getMonth();
+
+  const dayOfTheWeek = date.getDate();
+  const monthString = month.toString().length === 1 ? `0${month}` : month.toString();
+  const year = date.getFullYear();
+  
+  const getDate = _ => {
     const day = date.getDay();
-    const dayOfTheWeek = date.getDate();
-    const month = date.getMonth();
-    const year = date.getFullYear();
     const months = ["January", "February", "Mars", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
     const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     
-    return `${days[day]} ${dayOfTheWeek} ${months[month]} ${year}`
+    return `${days[day]} ${dayOfTheWeek} ${months[month]} ${year}`;
   }
   
   const getWeather = e => {
@@ -54,7 +58,7 @@ function App() {
       .then(response => response.json())
       .then(res => {
         const response = res.filter(suggestion => new RegExp(`^${query}`, 'i').test(suggestion.city))
-                            .filter((suggestion, i) => i < 10)
+                            .filter((suggestion, i) => i < 10);
         setSuggestions(response);
       })
       .catch(err => console.error(err));
@@ -62,33 +66,30 @@ function App() {
   }, [query, REACT_APP_CITIES_BASE, REACT_APP_CITIES_HOST, REACT_APP_CITIES_KEY]);
 
   useEffect(() => {
-    if (isSecureContext) {
-      if (navigator) {
-        if ("geolocation" in navigator) {
-          function success(position) {
-            const { latitude, longitude } = position.coords;
-            const url = new URL(`${REACT_APP_WEATHER_BASE}?lat=${latitude}&lon=${longitude}&APPID=${REACT_APP_WEATHER_KEY}`);
-            fetch(url)
-              .then(response => response.json())
-              .then(res => setWeather(res))
-              .catch(err => console.error(err));
-          }
-  
-          function error(err) {
-            console.info(`ERROR(${err.code}): ${err.message}`)
-          }
-  
-          function options() {
-            return {
-              enableHighAccuracy: true,
-              timeout: 12000
-            }
-          }
-
-          (function() {
-            navigator.geolocation.getCurrentPosition(success, error, options);
-          })();
+    if (window.isSecureContext) {
+      if (navigator?.geolocation) {  
+        function success({ coords }) {
+          const { latitude, longitude } = coords;
+          const url = new URL(`${REACT_APP_WEATHER_BASE}?lat=${latitude}&lon=${longitude}&APPID=${REACT_APP_WEATHER_KEY}`);
+          fetch(url)
+            .then(response => response.json())
+            .then(res => setWeather(res))
+            .catch(err => console.error(err));
         }
+
+        function error({ code, message }) {
+          console.info(`ERROR(${code}): ${message}`)
+        }
+
+        function options() {
+          return {
+            timeout: 12000
+          }
+        }
+
+        (function() {
+          navigator.geolocation.getCurrentPosition(success, error, options);
+        })(); 
       }
     } 
   }, [REACT_APP_WEATHER_BASE, REACT_APP_WEATHER_KEY])
@@ -102,16 +103,16 @@ function App() {
         </datalist>
       </form>     
       {weather ? (  
-        <React.Fragment>      
+        <>    
           <h1 className="city">{weather.name}, {weather.sys.country}</h1>
-            <span><time dateTime="12-04-2020">{getDate()}</time></span>
+            <span><time dateTime={`${dayOfTheWeek}-${(monthString)}-${year}`}>{getDate()}</time></span>
           <div className="temperatureBox">
             <span className="temperature">{Math.round((weather.main.temp) - 273.15)}</span>°c
           </div>
           <div className="weatherBox">
             <span className="weather">{weather.weather[0].main}</span>
           </div>    
-        </React.Fragment>
+        </>
       ) : (
           <h1>{error ? `${error.data.cod}: ${error.data.message}` : null}</h1>
       )}    
